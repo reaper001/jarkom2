@@ -8,10 +8,11 @@ package socketprograming;
 import java.io.*;
 import java.net.*;
 
+
 public class UDPServer {
 
-
-    public static void main(String args[]) throws Exception {
+    
+    public static void main(String args[])  {
         /*DatagramSocket ds=new DatagramSocket(9999);
         byte[] b1=new byte[1024];
         DatagramPacket dp=new DatagramPacket(b1,b1.length);
@@ -30,20 +31,64 @@ public class UDPServer {
         DatagramPacket reply2=new DatagramPacket(b2,b2.length,ia,dp.getPort());
         ds.send(reply);
         */
-        DatagramSocket ds=new DatagramSocket(9999);
-        byte[] b1=new byte[1024];
-        DatagramPacket player1=new DatagramPacket(b1,b1.length);
-        DatagramPacket player2=new DatagramPacket(b1,b1.length);
-        ds.receive(player1);
-        reply("Waiting for player2",player1.getPort(),ds);
-        ds.receive(player2);
-        reply("Waiting for player1 to move",player2.getPort(),ds);
+        Thread serverThread=new Thread(new UDP());
+        serverThread.start();
+
     }
     
-    public static void reply(String msg,int port,DatagramSocket ds) throws Exception{
+
+    
+}
+class UDP implements Runnable{
+    DatagramSocket ds;
+    int port1,port2;
+    DatagramPacket player1,player2;
+    @Override
+    public void run() {
+        try{
+            ds=new DatagramSocket(9999);
+            byte[] b1=new byte[1024];
+            player1=new DatagramPacket(b1,b1.length);
+            player2=new DatagramPacket(b1,b1.length);
+            waiting();
+            boolean finish=false;
+            boolean isPlayer1=true;
+            System.out.println("game starting");
+            String lastChange="";
+            while(!finish){
+                System.out.println("waiting for player");
+                int port;
+                if(isPlayer1)port=port1;
+                else port=port2;
+                reply("Your Turn!"+lastChange,port,ds);
+                if(!isPlayer1)ds.receive(player2);
+                else ds.receive(player1);
+                String temp=new String(player1.getData(),0,player1.getLength());
+                System.out.println("isiTemp="+temp);
+                lastChange=","+temp;
+                isPlayer1=!isPlayer1;
+            }
+        }
+        catch(Exception e){
+        
+        }
+    }
+    public void reply(String msg,int port,DatagramSocket ds) throws Exception{
         InetAddress address=InetAddress.getByName("192.168.100.25");
         byte[] temp=msg.getBytes();
         DatagramPacket reply=new DatagramPacket(temp,temp.length,address,port);
         ds.send(reply);
     }
+    
+    public void waiting()throws Exception{
+        ds.receive(player1);
+        port1=player1.getPort();
+        System.out.println("player 1 connected");
+        reply("Waiting for player2",port1,ds);
+        ds.receive(player2);
+        port2=player2.getPort();
+        System.out.println("player 2 connected");
+        reply("Waiting for player1 to move",port2,ds);
+    }
+    
 }
